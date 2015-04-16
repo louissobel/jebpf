@@ -21,6 +21,14 @@ public class EBPFInterpreterTests {
 	@Rule
 	public ExpectedException expectedEx = ExpectedException.none();
 	
+	private static int runCode(EBPFInstruction[] code, byte[] data) throws EBPFProgramException {
+		if (data == null) {
+			data = new byte[0];
+		}
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		return t.run(data);
+	}
+	
 	/**
 	 * ALU Tests
 	 */
@@ -48,99 +56,85 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testAdd() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.ADD, 4, 10);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 14);
+		assertEquals(runCode(code, null), 14);
 	}
 	
 	@Test
 	public void testSub() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.SUB, 4, 10);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), -6);
+		assertEquals(runCode(code, null), -6);
 	}
 	
 	@Test
 	public void testMul() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.MUL, 3, 7);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 21);
+		assertEquals(runCode(code, null), 21);
 	}
 	
 	@Test
 	public void testDiv() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.DIV, 7, 3);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 2);
+		assertEquals(runCode(code, null), 2);
 	}
 	
 	@Test
 	public void testDivZero() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.DIV, 7, 0);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	@Test
 	public void testOr() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.OR, 9, 4);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 13);
+		assertEquals(runCode(code, null), 13);
 	}
 	
 	@Test
 	public void testAnd() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.AND, 9, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	
 	@Test
 	public void testLsh() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.LSH, 9, 2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 36);
+		assertEquals(runCode(code, null), 36);
 	}
 	
 	@Test
 	public void testRsh() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.RSH, 0x80000000, 1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0x40000000);
+		assertEquals(runCode(code, null), 0x40000000);
 	}
 	
 	@Test
 	public void testNeg() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.NEG, 0xFFFFFFFF, 0);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	
 	@Test
 	public void testMod() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.MOD, 21, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	
 	@Test
 	public void testModZero() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.MOD, 21, 0);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	@Test
 	public void testXor() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.XOR, 0xA5F0, 0x5A02);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0xFFF2);
+		assertEquals(runCode(code, null), 0xFFF2);
 	}
 	
 	@Test
 	public void testMov() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.MOV, 123214, 4);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 4);
+		assertEquals(runCode(code, null), 4);
 	}
 	@Test
 	public void testMovDoesntRequireLeftImm() throws EBPFProgramException {
@@ -148,8 +142,7 @@ public class EBPFInterpreterTests {
 				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
 				EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testMovDoesntRequireLeftReg() throws EBPFProgramException {
@@ -158,16 +151,14 @@ public class EBPFInterpreterTests {
 				EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 1),
 				EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	
 
 	@Test
 	public void testArsh() throws EBPFProgramException {
 		EBPFInstruction[] code = getAluTestCode(InstructionCode.ARSH, 0x80000000, 1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0xC0000000);
+		assertEquals(runCode(code, null), 0xC0000000);
 	}
 
 	/**
@@ -193,14 +184,12 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testJa1() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JA, 5, 3);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJa2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JA, 3, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJaUnintialized() throws EBPFProgramException {
@@ -210,144 +199,122 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.JMP_REG(InstructionCode.JA, 7, 8, (short)0),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 5);
+		assertEquals(runCode(code, null), 5);
 	}
 	
 	@Test
 	public void testJeqTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JEQ, 5, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJeqNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JEQ, 3, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	// These are UNSIGNED comparisons
 	@Test
 	public void testJgtTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, 0x80000000, 0);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJgtNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, 4, -2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	@Test
 	public void testJgtNotTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, -2, -2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	// These are UNSIGNED comparisons
 	@Test
 	public void testJgeTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, 0x80000000, 0);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJgeTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, -2, -2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJgeNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, 4, -2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	@Test
 	public void testJsetTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSET, 9, 8);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsetNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSET, 9, 2);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	@Test
 	public void testJneTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JNE, 5, 6);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJneNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JNE, 5, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	// SIGNED comparisons
 	@Test
 	public void testJsgtTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, 1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsgtTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, -1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsgtNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, -2, 4);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	@Test
 	public void testJsgtNotTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	@Test
 	public void testJsgeTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsgeTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, -1);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsgeTaken3() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 5);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 1);
+		assertEquals(runCode(code, null), 1);
 	}
 	@Test
 	public void testJsgeNotTaken() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 6);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	@Test
 	public void testJsgeNotTaken2() throws EBPFProgramException {
 		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, -1, 6);
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		assertEquals(t.run(new byte[] {}), 0);
+		assertEquals(runCode(code, null), 0);
 	}
 	
 	/**
@@ -360,9 +327,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.B, 0),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		assertEquals(t.run(data), 0x000000FF);
+		assertEquals(runCode(code, data), 0x000000FF);
 	}
 
 	@Test
@@ -371,9 +337,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.B, 2),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		assertEquals(t.run(data), 0x00000099);
+		assertEquals(runCode(code, data), 0x00000099);
 	}
 	
 	@Test
@@ -384,9 +349,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.B, 4),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 
 	@Test
@@ -397,9 +361,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.B, -1),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 	
 	@Test
@@ -408,9 +371,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.H, 0),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		assertEquals(t.run(data), 0x0000FFBB);
+		assertEquals(runCode(code, data), 0x0000FFBB);
 	}
 
 	@Test
@@ -419,9 +381,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.H, 1),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		assertEquals(t.run(data), 0x0000BB99);
+		assertEquals(runCode(code, data), 0x0000BB99);
 	}
 	
 	@Test
@@ -432,9 +393,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.H, 3),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 	@Test
 	public void testLdAbsShortOutOfBounds() throws EBPFProgramException {
@@ -444,9 +404,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.H, 6),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 
 	@Test
@@ -457,9 +416,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.H, -1),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 	
 	@Test
@@ -468,10 +426,61 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.W, 0),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		assertEquals(t.run(data), 0xFFBB9955);
+		assertEquals(runCode(code, data), 0xFFBB9955);
 	}
+	
+	private static EBPFInstruction[] getLdAbsScratchTest(int r) {
+		return new EBPFInstruction[] {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, r, r),
+			EBPFInstruction.LD_ABS(InstructionSize.B, 0),
+			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, r), // should cause error
+			EBPFInstruction.EXIT(),	
+		};
+	}
+	
+	// Check registers are scratched
+	@Test
+	public void testLdAbsScratchR1() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
+		EBPFInstruction[] code = getLdAbsScratchTest(1);
+		byte[] data = {(byte)0xFF};
+		runCode(code, data);
+	}
+	@Test
+	public void testLdAbsScratchR2() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
+		EBPFInstruction[] code = getLdAbsScratchTest(2);
+		byte[] data = {(byte)0xFF};
+		runCode(code, data);
+	}
+	@Test
+	public void testLdAbsScratchR3() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
+		EBPFInstruction[] code = getLdAbsScratchTest(3);
+		byte[] data = {(byte)0xFF};
+		runCode(code, data);
+	}
+	@Test
+	public void testLdAbsScratchR4() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
+		EBPFInstruction[] code = getLdAbsScratchTest(4);
+		byte[] data = {(byte)0xFF};
+		runCode(code, data);
+	}
+	@Test
+	public void testLdAbsScratchR5() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
+		EBPFInstruction[] code = getLdAbsScratchTest(5);
+		byte[] data = {(byte)0xFF};
+		runCode(code, data);
+	}
+	
 
 	@Test
 	public void testLdAbsInt2() throws EBPFProgramException {
@@ -479,9 +488,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.W, 3),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55, (byte)0x44, (byte)0xCC, (byte)0x11};
-		assertEquals(t.run(data), 0x5544CC11);
+		assertEquals(runCode(code, data), 0x5544CC11);
 	}
 	
 	@Test
@@ -492,9 +500,8 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.W, 1),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
 	@Test
 	public void testLdAbsIntOutOfBounds() throws EBPFProgramException {
@@ -504,10 +511,111 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.LD_ABS(InstructionSize.W, 6),
 			EBPFInstruction.EXIT(),
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
-		t.run(data);
+		runCode(code, data);
 	}
+	
+	// LD_INDs
+	@Test
+	public void testLdIndByte() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, 0),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x000000FF);
+	}
+	
+	@Test
+	public void testLdIndByte2() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, 0),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x000000BB);
+	}
+	
+	@Test
+	public void testLdIndByte3() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, 2),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x00000099);
+	}
+	
+	@Test
+	public void testLdIndByte4() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, 2),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x00000055);
+	}
+	
+	@Test
+	public void testLdIndByteBackIntoRange() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, -1),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, 1),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x000000FF);
+	}
+	
+	@Test
+	public void testLdIndByteBackIntoRange2() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 4),
+			EBPFInstruction.LD_IND(InstructionSize.B, 3, -1),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x00000055);
+	}
+	
+	@Test
+	public void testLdIndShort() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.H, 3, 1),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0x00009955);
+	}
+	
+	@Test
+	public void testLdIndInt() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.W, 3, 0),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(runCode(code, data), 0xFFBB9955);
+	}
+	
+	@Test
+	public void testLdIndBadRegister() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage("read uninitialized");
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_IND(InstructionSize.W, 3, 0),
+			EBPFInstruction.EXIT(),
+		};
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		runCode(code, data);
+	}
+	
 	
 
 	/**
@@ -519,8 +627,7 @@ public class EBPFInterpreterTests {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("end with EXIT"));
 		EBPFInstruction[] code = {};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 	
 	@Test
@@ -528,8 +635,7 @@ public class EBPFInterpreterTests {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("R0 must be initalized"));
 		EBPFInstruction[] code = { EBPFInstruction.EXIT() };
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 	
 	@Test
@@ -546,20 +652,18 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.JMP_IMM(InstructionCode.JA, 0, 0, (short)-2), // C Goes to B
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 
 	@Test
 	public void testReadUninitialized() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
-		expectedEx.expectMessage(CoreMatchers.containsString("unintialized register"));
+		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
 		EBPFInstruction[] code = {
 			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 1),	
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 	
 	@Test
@@ -570,8 +674,7 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 100),	
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 
 	@Test
@@ -582,8 +685,7 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 100, 100),	
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 
 	@Test
@@ -594,8 +696,7 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 10, 100),	
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 	
 	@Test
@@ -608,8 +709,7 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.ALU_IMM(InstructionCode.END_NOT_IMPLEMENTED, 0, 0),
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 	
 	@Test
@@ -622,7 +722,6 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.JMP_IMM(InstructionCode.CALL_NOT_IMPLEMENTED, 0, 0, (short)0),
 			EBPFInstruction.EXIT()
 		};
-		EBPFInterpreter t = new EBPFInterpreter(code);
-		t.run(new byte[] {});
+		runCode(code, null);
 	}
 }

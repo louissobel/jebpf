@@ -126,6 +126,10 @@ public class EBPFInterpreter {
 			case ABS:
 				ldOffset = insn.mImm;
 				break;
+			case IND:
+				right = checkedRegisterRead(insn.mSrcReg);
+				ldOffset = insn.mImm + right;
+				break;
 			default:
 				abortInterpreter("Invalid Mode for LD class");
 			}
@@ -158,6 +162,14 @@ public class EBPFInterpreter {
 				}
 			}
 			mRegisters.put(0, value);
+
+			// Scratch the caller saved registers
+			mRegisters.remove(1);
+			mRegisters.remove(2);
+			mRegisters.remove(3);
+			mRegisters.remove(4);
+			mRegisters.remove(5);
+			
 			mInstructionPointer += 1;
 			break;
 			
@@ -185,7 +197,7 @@ public class EBPFInterpreter {
 		}
 		Integer i = mRegisters.get(reg);
 		if (i == null) {
-			abortInterpreter("Attempt to read unintialized register");
+			abortInterpreter("Attempt to read uninitialized register");
 		}
 		return i.intValue();
 	}
