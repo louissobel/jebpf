@@ -1,16 +1,30 @@
 package com.sobel.jebpf;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 
 public class EBPFInterpreter {
 
-	private EBPFInstruction[] mInstructions;
-	private int[] mRegisters;
+	public static class EBPFProgramException extends Exception {
+		public final List<Integer> trace;
+		public final HashMap<Integer, Integer> registers;
+		
+		public EBPFProgramException(String s, List<Integer> t, HashMap<Integer, Integer> r) {
+			super(s);
+			trace = t;
+			registers = r;
+		}
+	}
 	
+	private EBPFInstruction[] mInstructions;
+	private HashMap<Integer, Integer> mRegisters;
 	private int mInstructionPointer;
+	private List<Integer> mTrace;
+
 	private boolean mRunning = false;
 	private boolean mReady = false;
 	
@@ -22,13 +36,18 @@ public class EBPFInterpreter {
 	}
 	
 	private void reset() {
-		mRegisters = new int[10];
+		mRegisters = new HashMap<Integer, Integer>();
+		mTrace = new ArrayList<Integer>();
 		mInstructionPointer = 0;
 		mReady = true;
-		// TODO: VALIDATE!!!!!
 	}
 
-	public int run(byte[] packet) {
+	private void abortInterpreter(String msg) throws EBPFProgramException {
+		throw new EBPFProgramException(msg, new ArrayList<Integer>(mTrace),
+				new HashMap<Integer, Integer>(mRegisters));
+	}
+	
+	public int run(byte[] packet) throws EBPFProgramException {
 		if (!mReady || mRunning) {
 			throw new RuntimeException("Cannot run while running or not reset");
 		}
@@ -38,50 +57,113 @@ public class EBPFInterpreter {
 		while (mRunning) {
 			step();
 		}
-		return mRegisters[0]; // Hmmm...
+		Integer r = mRegisters.get(0);
+		if (r == null) {
+			abortInterpreter("R0 must be initalized before exit");
+		}
+		return r.intValue();
 	}
 
-	private void step() {
-		// TODO: SO MUCH VERIFICATION
-		// like here, did we run over, INTEGRITY ERROR
+	private void step() throws EBPFProgramException {
+		mTrace.add(mInstructionPointer);
+		if (mInstructionPointer >= mInstructions.length) {
+			abortInterpreter("Unexpected end of instruction stream - must end with EXIT");
+		}
 		EBPFInstruction insn = mInstructions[mInstructionPointer];
-		System.out.println(insn.mClass);
 		int left;
 		int right;
 		
 		switch (insn.mClass) {
 		case ALU:
-			left = mRegisters[insn.mDstReg];
-			right = doGetRight(insn);
-			mRegisters[insn.mDstReg] = doALUOp(insn.mCode, left, right);
+			// For MOV we don't need left...
+			if (insn.mCode == EBPFInstruction.InstructionCode.MOV) {
+				left = 0;
+			} else {
+				left = checkedRegisterRead(insn.mDstReg);
+			}
+			// For NEG we don't need right...
+			if (insn.mCode == EBPFInstruction.InstructionCode.NEG) {
+				right = 0;
+			} else {
+				right = doGetRight(insn);
+			}
+			checkedRegisterWrite(insn.mDstReg, doALUOp(insn.mCode, left, right));
 			mInstructionPointer += 1;
 			break;
 		case JMP:
+			if (insn.mOff < 0) {
+				abortInterpreter("Negative Jump Offset");
+			}
 			if (insn.mCode == EBPFInstruction.InstructionCode.EXIT) {
 				mRunning = false;
 				break;
 			}
-			left = mRegisters[insn.mDstReg];
-			right = doGetRight(insn);
+
+			// JA doesn't need left and right
+			if (insn.mCode == EBPFInstruction.InstructionCode.JA) {
+				left = 0;
+				right = 0;
+			} else {
+				left = checkedRegisterRead(insn.mDstReg);
+				right = doGetRight(insn);
+			}
 			if (doJMPCond(insn.mCode, left, right)) {
+				int oldInstructionPointer = mInstructionPointer;
 				mInstructionPointer += (insn.mOff + 1);
+				// Check for overflow
+				if (mInstructionPointer < oldInstructionPointer) {
+					abortInterpreter("Instruction Pointer Overflow");
+				}
 			} else {
 				mInstructionPointer += 1;
 			}
 			break;
+		case LD:
+		case LDX:
+		case ST:
+		case STX:
+		default:
+			abortInterpreter("Unhandled Instruction Class");
 		}
 		
 	}
 	
-	private int doGetRight(EBPFInstruction insn) {
+	private boolean registerReadable(int reg) {
+		return (reg >= 0 && reg <= 10); 
+	}
+	
+	private boolean registerWritable(int reg) {
+		// R10 is not writable
+		return (reg >= 0 && reg <= 9);
+	}
+
+	private int checkedRegisterRead(int reg) throws EBPFProgramException {
+		if (!registerReadable(reg)) {
+			abortInterpreter("Attempt to read out of bounds register");
+		}
+		Integer i = mRegisters.get(reg);
+		if (i == null) {
+			abortInterpreter("Attempt to read unintialized register");
+		}
+		return i.intValue();
+	}
+	
+	private void checkedRegisterWrite(int reg, int v) throws EBPFProgramException {
+		if (!registerWritable(reg)) {
+			abortInterpreter("Attempt to write out of bounds register");
+		}
+		mRegisters.put(reg, v);
+	}
+	
+	private int doGetRight(EBPFInstruction insn) throws EBPFProgramException {
 		if (insn.mSource == EBPFInstruction.InstructionSource.K) {
 			return insn.mImm;
 		} else {
-			return mRegisters[insn.mSrcReg];
+			return checkedRegisterRead(insn.mSrcReg);
 		}
 	}
 
-	private int doALUOp(InstructionCode mCode, int left, int right) {
+	private int doALUOp(InstructionCode mCode, int left, int right) throws EBPFProgramException {
 		// Returns 0 rather tha divide by 0.
 		switch (mCode) {
 		case ADD: return left + right;
@@ -91,18 +173,19 @@ public class EBPFInterpreter {
 		case OR: return left | right;
 		case AND: return left & right;
 		case LSH: return left << right;
-		case RSH: return left >> right;
+		case RSH: return left >>> right;
 		case NEG: return -left;
 		case MOD: return (right == 0 ? 0: left % right);
 		case XOR: return left ^ right;
 		case MOV: return right;
-		case ARSH: return left >>> right;
+		case ARSH: return left >> right;
 		default:
-			throw new RuntimeException("Bad Code TO ALU");
+			abortInterpreter("Bad code to ALU");
+			return 0; // Unreachable.
 		}
 	}
 	
-	private boolean doJMPCond(InstructionCode mCode, int left, int right) {
+	private boolean doJMPCond(InstructionCode mCode, int left, int right) throws EBPFProgramException {
 		switch (mCode) {
 		case JA: return true;
 		case JEQ: return left == right;
@@ -113,13 +196,14 @@ public class EBPFInterpreter {
 		case JSGT: return left > right;
 		case JSGE: return left >= right;
 		default:
-			throw new RuntimeException("Bad Code to JMP");
+			abortInterpreter("Bad code to JMP");
+			return false;
 		}
 	}
 
 	private boolean unsignedGT(int left, int right) {
 		// Hack hack hack
-		return ((long)left) > ((long)right);
+		return ((long)left & 0x00000000FFFFFFFFL) > ((long)right & 0x00000000FFFFFFFFL);
 	}
 
 }

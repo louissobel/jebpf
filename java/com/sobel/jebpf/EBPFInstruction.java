@@ -255,4 +255,7 @@ public class EBPFInstruction {
 	public static EBPFInstruction JMP_IMM(InstructionCode code, int leftReg, int imm, short off) {
 		return new EBPFInstruction(InstructionClass.JMP, InstructionSource.K, code, null, null, leftReg, 0, off, imm);
 	}
+	public static EBPFInstruction EXIT() {
+		return JMP_IMM(InstructionCode.EXIT, 0, 0, (short)0);
+	}
 }
