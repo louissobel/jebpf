@@ -119,6 +119,48 @@ public class EBPFInterpreter {
 			}
 			break;
 		case LD:
+			int ldOffset = 0;
+			boolean quitOnOutOfBounds = false;
+
+			switch (insn.mMode) {
+			case ABS:
+				ldOffset = insn.mImm;
+				break;
+			default:
+				abortInterpreter("Invalid Mode for LD class");
+			}
+			
+			// Just try and use the byte buffer for access,
+			// Catching Index out of bounds error if we need to
+			// TODO: this isn't idiomatic java, AFAIK..
+			int value = 0;
+			try {
+				switch (insn.mSize) {
+				case B:
+					value = mPacket.get(ldOffset) & 0x000000FF;
+					break;
+				case H:
+					value = mPacket.getShort(ldOffset) & 0x0000FFFF;
+					break;
+				case W:
+					value = mPacket.getInt(ldOffset);
+					break;
+				default:
+					abortInterpreter("Unknown LD size");
+				}
+			} catch (IndexOutOfBoundsException e) {
+				if (quitOnOutOfBounds) {
+					mRegisters.put(0, 0);
+					mRunning = false;
+					break;
+				} else {
+					abortInterpreter("Out of bounds memory access");
+				}
+			}
+			mRegisters.put(0, value);
+			mInstructionPointer += 1;
+			break;
+			
 		case LDX:
 		case ST:
 		case STX:
@@ -205,5 +247,5 @@ public class EBPFInterpreter {
 		// Hack hack hack
 		return ((long)left & 0x00000000FFFFFFFFL) > ((long)right & 0x00000000FFFFFFFFL);
 	}
-
+	
 }

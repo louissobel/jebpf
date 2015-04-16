@@ -258,4 +258,11 @@ public class EBPFInstruction {
 	public static EBPFInstruction EXIT() {
 		return JMP_IMM(InstructionCode.EXIT, 0, 0, (short)0);
 	}
+
+	public static EBPFInstruction LD_ABS(InstructionSize size, int imm) {
+		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.ABS, 0, 0, (short)0, imm);
+	}
+	public static EBPFInstruction LD_IND(InstructionSize size, int srcReg, int imm) {
+		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.IND, 0, srcReg, (short)0, imm);
+	}
 }

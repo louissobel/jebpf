@@ -12,11 +12,15 @@ import org.junit.rules.ExpectedException;
 
 import com.sobel.jebpf.EBPFInstruction;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
+import com.sobel.jebpf.EBPFInstruction.InstructionSize;
 import com.sobel.jebpf.EBPFInterpreter;
 import com.sobel.jebpf.EBPFInterpreter.EBPFProgramException;
 
 public class EBPFInterpreterTests {
 
+	@Rule
+	public ExpectedException expectedEx = ExpectedException.none();
+	
 	/**
 	 * ALU Tests
 	 */
@@ -345,12 +349,170 @@ public class EBPFInterpreterTests {
 		EBPFInterpreter t = new EBPFInterpreter(code);
 		assertEquals(t.run(new byte[] {}), 0);
 	}
+	
+	/**
+	 * Load Tests
+	 */
+	// Big endian??
+	@Test
+	public void testLdAbsByte() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.B, 0),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(t.run(data), 0x000000FF);
+	}
+
+	@Test
+	public void testLdAbsByte2() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.B, 2),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(t.run(data), 0x00000099);
+	}
+	
+	@Test
+	public void testLdAbsByteOutOfBounds() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.B, 4),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+
+	@Test
+	public void testLdAbsByteOutOfBoundsNegative() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.B, -1),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+	
+	@Test
+	public void testLdAbsShort() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.H, 0),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(t.run(data), 0x0000FFBB);
+	}
+
+	@Test
+	public void testLdAbsShort2() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.H, 1),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(t.run(data), 0x0000BB99);
+	}
+	
+	@Test
+	public void testLdAbsShortBorderingOutOfBounds() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.H, 3),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+	@Test
+	public void testLdAbsShortOutOfBounds() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.H, 6),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+
+	@Test
+	public void testLdAbsShortOutOfBoundsNegative() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.H, -1),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+	
+	@Test
+	public void testLdAbsInt() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.W, 0),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		assertEquals(t.run(data), 0xFFBB9955);
+	}
+
+	@Test
+	public void testLdAbsInt2() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.W, 3),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55, (byte)0x44, (byte)0xCC, (byte)0x11};
+		assertEquals(t.run(data), 0x5544CC11);
+	}
+	
+	@Test
+	public void testLdAbsIntOutOfBoundsBorder() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.W, 1),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+	@Test
+	public void testLdAbsIntOutOfBounds() throws EBPFProgramException {
+		expectedEx.expect(EBPFProgramException.class);
+		expectedEx.expectMessage(CoreMatchers.containsString("Out of bounds memory"));
+		EBPFInstruction[] code = {
+			EBPFInstruction.LD_ABS(InstructionSize.W, 6),
+			EBPFInstruction.EXIT(),
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
+		t.run(data);
+	}
+	
 
 	/**
 	 * Some Error Conditions
 	 */
-	@Rule
-	public ExpectedException expectedEx = ExpectedException.none();
 	
 	@Test
 	public void testNoInstructions() throws EBPFProgramException {
