@@ -8,7 +8,7 @@ import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 public class EBPFInterpreter {
 
 	private EBPFInstruction[] mInstructions;
-	private HashMap<Integer, Integer> mRegisters;
+	private int[] mRegisters;
 	
 	private int mInstructionPointer;
 	private boolean mRunning = false;
@@ -22,7 +22,7 @@ public class EBPFInterpreter {
 	}
 	
 	private void reset() {
-		mRegisters = new HashMap<Integer, Integer>();
+		mRegisters = new int[10];
 		mInstructionPointer = 0;
 		mReady = true;
 		// TODO: VALIDATE!!!!!
@@ -38,7 +38,7 @@ public class EBPFInterpreter {
 		while (mRunning) {
 			step();
 		}
-		return mRegisters.get(0); // Hmmm...
+		return mRegisters[0]; // Hmmm...
 	}
 
 	private void step() {
@@ -46,14 +46,14 @@ public class EBPFInterpreter {
 		// like here, did we run over, INTEGRITY ERROR
 		EBPFInstruction insn = mInstructions[mInstructionPointer];
 		System.out.println(insn.mClass);
-		Integer left;
-		Integer right;
+		int left;
+		int right;
 		
 		switch (insn.mClass) {
 		case ALU:
-			left = mRegisters.get(insn.mDstReg);
+			left = mRegisters[insn.mDstReg];
 			right = doGetRight(insn);
-			mRegisters.put(left, doALUOp(insn.mCode, left, right));
+			mRegisters[insn.mDstReg] = doALUOp(insn.mCode, left, right);
 			mInstructionPointer += 1;
 			break;
 		case JMP:
@@ -61,7 +61,7 @@ public class EBPFInterpreter {
 				mRunning = false;
 				break;
 			}
-			left = mRegisters.get(insn.mDstReg);
+			left = mRegisters[insn.mDstReg];
 			right = doGetRight(insn);
 			if (doJMPCond(insn.mCode, left, right)) {
 				mInstructionPointer += (insn.mOff + 1);
@@ -73,15 +73,15 @@ public class EBPFInterpreter {
 		
 	}
 	
-	private Integer doGetRight(EBPFInstruction insn) {
+	private int doGetRight(EBPFInstruction insn) {
 		if (insn.mSource == EBPFInstruction.InstructionSource.K) {
 			return insn.mImm;
 		} else {
-			return mRegisters.get(insn.mSrcReg);
+			return mRegisters[insn.mSrcReg];
 		}
 	}
 
-	private int doALUOp(InstructionCode mCode, Integer left, Integer right) {
+	private int doALUOp(InstructionCode mCode, int left, int right) {
 		// Returns 0 rather tha divide by 0.
 		switch (mCode) {
 		case ADD: return left + right;
@@ -102,7 +102,7 @@ public class EBPFInterpreter {
 		}
 	}
 	
-	private boolean doJMPCond(InstructionCode mCode, Integer left, Integer right) {
+	private boolean doJMPCond(InstructionCode mCode, int left, int right) {
 		switch (mCode) {
 		case JA: return true;
 		case JEQ: return left == right;
