@@ -13,6 +13,7 @@ import org.junit.rules.ExpectedException;
 import com.sobel.jebpf.EBPFInstruction;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInstruction.InstructionSize;
+import com.sobel.jebpf.EBPFInstruction.Register;
 import com.sobel.jebpf.EBPFInterpreter;
 import com.sobel.jebpf.EBPFInterpreter.EBPFProgramException;
 
@@ -33,7 +34,7 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testMovDoesntRequireLeftImm() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
+				EBPFInstruction.MOV_IMM(Register.R0, 1),
 				EBPFInstruction.EXIT()
 		};
 		EBPFInterpreter t = new EBPFInterpreter(code);
@@ -42,8 +43,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testMovDoesntRequireLeftReg() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, 1),
-				EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 1),
+				EBPFInstruction.MOV_IMM(Register.R1, 1),
+				EBPFInstruction.MOV_IMM(Register.R0, 1),
 				EBPFInstruction.EXIT()
 		};
 		EBPFInterpreter t = new EBPFInterpreter(code);
@@ -55,8 +56,8 @@ public class EBPFInterpreterTests {
 	public void testJaUnintialized() throws EBPFProgramException {
 		// Should be able to JA without initalized registers
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 5),
-			EBPFInstruction.JMP_REG(InstructionCode.JA, 7, 8, (short)0),
+			EBPFInstruction.MOV_IMM(Register.R0, 5),
+			EBPFInstruction.JMP_REG(InstructionCode.JA, Register.R7, Register.R8, (short)0),
 			EBPFInstruction.EXIT(),
 		};
 		assertEquals(runCode(code, null), 5);
@@ -175,11 +176,11 @@ public class EBPFInterpreterTests {
 		assertEquals(runCode(code, data), 0xFFBB9955);
 	}
 	
-	private static EBPFInstruction[] getLdAbsScratchTest(int r) {
+	private static EBPFInstruction[] getLdAbsScratchTest(Register r) {
 		return new EBPFInstruction[] {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, r, r),
+			EBPFInstruction.MOV_IMM(r, -1),
 			EBPFInstruction.LD_ABS(InstructionSize.B, 0),
-			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, r), // should cause error
+			EBPFInstruction.MOV_REG(Register.R0, r), // should cause error
 			EBPFInstruction.EXIT(),	
 		};
 	}
@@ -189,7 +190,7 @@ public class EBPFInterpreterTests {
 	public void testLdAbsScratchR1() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
-		EBPFInstruction[] code = getLdAbsScratchTest(1);
+		EBPFInstruction[] code = getLdAbsScratchTest(Register.R1);
 		byte[] data = {(byte)0xFF};
 		runCode(code, data);
 	}
@@ -197,7 +198,7 @@ public class EBPFInterpreterTests {
 	public void testLdAbsScratchR2() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
-		EBPFInstruction[] code = getLdAbsScratchTest(2);
+		EBPFInstruction[] code = getLdAbsScratchTest(Register.R2);
 		byte[] data = {(byte)0xFF};
 		runCode(code, data);
 	}
@@ -205,7 +206,7 @@ public class EBPFInterpreterTests {
 	public void testLdAbsScratchR3() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
-		EBPFInstruction[] code = getLdAbsScratchTest(3);
+		EBPFInstruction[] code = getLdAbsScratchTest(Register.R3);
 		byte[] data = {(byte)0xFF};
 		runCode(code, data);
 	}
@@ -213,7 +214,7 @@ public class EBPFInterpreterTests {
 	public void testLdAbsScratchR4() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
-		EBPFInstruction[] code = getLdAbsScratchTest(4);
+		EBPFInstruction[] code = getLdAbsScratchTest(Register.R4);
 		byte[] data = {(byte)0xFF};
 		runCode(code, data);
 	}
@@ -221,7 +222,7 @@ public class EBPFInterpreterTests {
 	public void testLdAbsScratchR5() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
-		EBPFInstruction[] code = getLdAbsScratchTest(5);
+		EBPFInstruction[] code = getLdAbsScratchTest(Register.R5);
 		byte[] data = {(byte)0xFF};
 		runCode(code, data);
 	}
@@ -264,8 +265,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByte() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, 0),
+			EBPFInstruction.MOV_IMM(Register.R3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, 0),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -275,8 +276,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByte2() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, 0),
+			EBPFInstruction.MOV_IMM(Register.R3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, 0),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -286,8 +287,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByte3() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, 2),
+			EBPFInstruction.MOV_IMM(Register.R3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, 2),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -297,8 +298,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByte4() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, 2),
+			EBPFInstruction.MOV_IMM(Register.R3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, 2),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -308,8 +309,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByteBackIntoRange() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, -1),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, 1),
+			EBPFInstruction.MOV_IMM(Register.R3, -1),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, 1),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -319,8 +320,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndByteBackIntoRange2() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 4),
-			EBPFInstruction.LD_IND(InstructionSize.B, 3, -1),
+			EBPFInstruction.MOV_IMM(Register.R3, 4),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R3, -1),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -330,8 +331,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndShort() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 1),
-			EBPFInstruction.LD_IND(InstructionSize.H, 3, 1),
+			EBPFInstruction.MOV_IMM(Register.R3, 1),
+			EBPFInstruction.LD_IND(InstructionSize.H, Register.R3, 1),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -341,8 +342,8 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testLdIndInt() throws EBPFProgramException {
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, 0),
-			EBPFInstruction.LD_IND(InstructionSize.W, 3, 0),
+			EBPFInstruction.MOV_IMM(Register.R3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.W, Register.R3, 0),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -354,7 +355,7 @@ public class EBPFInterpreterTests {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage("read uninitialized");
 		EBPFInstruction[] code = {
-			EBPFInstruction.LD_IND(InstructionSize.W, 3, 0),
+			EBPFInstruction.LD_IND(InstructionSize.W, Register.R3, 0),
 			EBPFInstruction.EXIT(),
 		};
 		byte[] data = {(byte)0xFF, (byte)0xBB, (byte)0x99, (byte)0x55};
@@ -390,11 +391,11 @@ public class EBPFInterpreterTests {
 
 		// We want this to still terminate.... nobody wants an infinite loop
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
+			EBPFInstruction.MOV_IMM(Register.R0, 0),
 
-			EBPFInstruction.JMP_IMM(InstructionCode.JA, 0, 0, (short)1),  // A Goes to C   
-			EBPFInstruction.JMP_IMM(InstructionCode.JA, 0, 0, (short)1),  // B Goes to Exit
-			EBPFInstruction.JMP_IMM(InstructionCode.JA, 0, 0, (short)-2), // C Goes to B
+			EBPFInstruction.JMP_JA((short)1),  // A Goes to C   
+			EBPFInstruction.JMP_JA((short)1),  // B Goes to Exit
+			EBPFInstruction.JMP_JA((short)-2), // C Goes to B
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -405,7 +406,7 @@ public class EBPFInterpreterTests {
 		expectedEx.expect(EBPFProgramException.class);
 		expectedEx.expectMessage(CoreMatchers.containsString("uninitialized register"));
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 1),	
+			EBPFInstruction.MOV_REG(Register.R0, Register.R1),	
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -414,9 +415,9 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testReadOutOfBounds() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
-		expectedEx.expectMessage(CoreMatchers.containsString("out of bounds"));
+		expectedEx.expectMessage(CoreMatchers.containsString("null"));
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 100),	
+			EBPFInstruction.MOV_REG(Register.R0, null),	
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -425,9 +426,9 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testWriteOutOfBounds() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
-		expectedEx.expectMessage(CoreMatchers.containsString("out of bounds"));
+		expectedEx.expectMessage(CoreMatchers.containsString("null"));
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 100, 100),	
+			EBPFInstruction.MOV_IMM(null, 100),	
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -436,9 +437,9 @@ public class EBPFInterpreterTests {
 	@Test
 	public void testWriteR10() throws EBPFProgramException {
 		expectedEx.expect(EBPFProgramException.class);
-		expectedEx.expectMessage(CoreMatchers.containsString("out of bounds"));
+		expectedEx.expectMessage(CoreMatchers.containsString("read-only"));
 		EBPFInstruction[] code = {
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 10, 100),	
+			EBPFInstruction.MOV_IMM(Register.R10, 100),	
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -450,8 +451,8 @@ public class EBPFInterpreterTests {
 		expectedEx.expectMessage(CoreMatchers.containsString("Bad code to ALU"));
 		EBPFInstruction[] code = {
 		    // Jank this in here.
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
-			EBPFInstruction.ALU_IMM(InstructionCode.END_NOT_IMPLEMENTED, 0, 0),
+			EBPFInstruction.MOV_IMM(Register.R0, 0),
+			EBPFInstruction.ALU_IMM(InstructionCode.END_NOT_IMPLEMENTED, Register.R0, 0),
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);
@@ -463,8 +464,8 @@ public class EBPFInterpreterTests {
 		expectedEx.expectMessage(CoreMatchers.containsString("Bad code to JMP"));
 		EBPFInstruction[] code = {
 		    // Jank this in here.
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
-			EBPFInstruction.JMP_IMM(InstructionCode.CALL_NOT_IMPLEMENTED, 0, 0, (short)0),
+			EBPFInstruction.MOV_IMM(Register.R0, 0),
+			EBPFInstruction.JMP_IMM(InstructionCode.CALL_NOT_IMPLEMENTED, Register.R0, 0, (short)0),
 			EBPFInstruction.EXIT()
 		};
 		runCode(code, null);

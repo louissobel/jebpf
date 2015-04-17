@@ -171,8 +171,28 @@ public class EBPFInstruction {
 	 * 
 	 * dst_reg:4, src_reg:4
 	 */
-	public final int mDstReg;
-	public final int mSrcReg;
+	public enum Register {
+		R0,
+		R1,
+		R2,
+		R3,
+		R4,
+		R5,
+		R6,
+		R7,
+		R8,
+		R9,
+		R10,
+	}
+	private Register DecodeRegister(byte c) throws EBPFDecodeException {
+		try {
+			return Register.values()[c];
+		} catch (ArrayIndexOutOfBoundsException e) {
+			throw new EBPFDecodeException("No register: " + c);
+		}
+	}
+	public final Register mDstReg;
+	public final Register mSrcReg;
 
 	/**
 	 * Literals
@@ -220,15 +240,15 @@ public class EBPFInstruction {
 		
 		// These get checked in the verifier,
 		// They decode OK no matter what.
-		mDstReg = dstReg;
-		mSrcReg = srcReg;
+		mDstReg = DecodeRegister(dstReg);
+		mSrcReg = DecodeRegister(srcReg);
 		mOff = off;
 		mImm = imm;
 	}
 
 	private EBPFInstruction(InstructionClass cl, InstructionSource source,
 			InstructionCode code, InstructionSize size, InstructionMode mode,
-			int dstReg, int srcReg, short off, int imm) {
+			Register dstReg, Register srcReg, short off, int imm) {
 		mClass = cl;
 		mSource = source;
 		mCode = code;
@@ -243,26 +263,38 @@ public class EBPFInstruction {
 		validateCodeForClass(code, cl);
 	}
 
-	public static EBPFInstruction ALU_REG(InstructionCode code, int dstReg, int srcReg) {
+	public static EBPFInstruction ALU_REG(InstructionCode code, Register dstReg, Register srcReg) {
 		return new EBPFInstruction(InstructionClass.ALU, InstructionSource.X, code, null, null, dstReg, srcReg, (short)0, 0);
 	}
-	public static EBPFInstruction ALU_IMM(InstructionCode code, int dstReg, int imm) {
-		return new EBPFInstruction(InstructionClass.ALU, InstructionSource.K, code, null, null, dstReg, 0, (short)0, imm);
+	public static EBPFInstruction MOV_REG(Register dstReg, Register srcReg) {
+		return ALU_REG(InstructionCode.MOV, dstReg, srcReg);
 	}
-	public static EBPFInstruction JMP_REG(InstructionCode code, int leftReg, int rightReg, short off) {
+
+	public static EBPFInstruction ALU_IMM(InstructionCode code, Register dstReg, int imm) {
+		return new EBPFInstruction(InstructionClass.ALU, InstructionSource.K, code, null, null, dstReg, null, (short)0, imm);
+	}
+	public static EBPFInstruction MOV_IMM(Register dstReg, int imm) {
+		return ALU_IMM(InstructionCode.MOV, dstReg, imm);
+	}
+
+	public static EBPFInstruction JMP_REG(InstructionCode code, Register leftReg, Register rightReg, short off) {
 		return new EBPFInstruction(InstructionClass.JMP, InstructionSource.X, code, null, null, leftReg, rightReg, off, 0);
 	}
-	public static EBPFInstruction JMP_IMM(InstructionCode code, int leftReg, int imm, short off) {
-		return new EBPFInstruction(InstructionClass.JMP, InstructionSource.K, code, null, null, leftReg, 0, off, imm);
+	public static EBPFInstruction JMP_IMM(InstructionCode code, Register leftReg, int imm, short off) {
+		return new EBPFInstruction(InstructionClass.JMP, InstructionSource.K, code, null, null, leftReg, null, off, imm);
 	}
+	public static EBPFInstruction JMP_JA(short off) {
+		return JMP_IMM(InstructionCode.JA, null, 0, off);
+	}
+	
 	public static EBPFInstruction EXIT() {
-		return JMP_IMM(InstructionCode.EXIT, 0, 0, (short)0);
+		return JMP_IMM(InstructionCode.EXIT, null, 0, (short)0);
 	}
 
 	public static EBPFInstruction LD_ABS(InstructionSize size, int imm) {
-		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.ABS, 0, 0, (short)0, imm);
+		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.ABS, null, null, (short)0, imm);
 	}
-	public static EBPFInstruction LD_IND(InstructionSize size, int srcReg, int imm) {
-		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.IND, 0, srcReg, (short)0, imm);
+	public static EBPFInstruction LD_IND(InstructionSize size, Register srcReg, int imm) {
+		return new EBPFInstruction(InstructionClass.LD, null, null, size, InstructionMode.IND, null, srcReg, (short)0, imm);
 	}
 }

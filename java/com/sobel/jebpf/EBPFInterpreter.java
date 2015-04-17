@@ -11,9 +11,9 @@ public class EBPFInterpreter {
 
 	public static class EBPFProgramException extends Exception {
 		public final List<Integer> trace;
-		public final HashMap<Integer, Integer> registers;
+		public final HashMap<EBPFInstruction.Register, Integer> registers;
 		
-		public EBPFProgramException(String s, List<Integer> t, HashMap<Integer, Integer> r) {
+		public EBPFProgramException(String s, List<Integer> t, HashMap<EBPFInstruction.Register, Integer> r) {
 			super(s);
 			trace = t;
 			registers = r;
@@ -21,7 +21,7 @@ public class EBPFInterpreter {
 	}
 	
 	private EBPFInstruction[] mInstructions;
-	private HashMap<Integer, Integer> mRegisters;
+	private HashMap<EBPFInstruction.Register, Integer> mRegisters;
 	private int mInstructionPointer;
 	private List<Integer> mTrace;
 
@@ -36,7 +36,7 @@ public class EBPFInterpreter {
 	}
 	
 	private void reset() {
-		mRegisters = new HashMap<Integer, Integer>();
+		mRegisters = new HashMap<EBPFInstruction.Register, Integer>();
 		mTrace = new ArrayList<Integer>();
 		mInstructionPointer = 0;
 		mReady = true;
@@ -44,7 +44,7 @@ public class EBPFInterpreter {
 
 	private void abortInterpreter(String msg) throws EBPFProgramException {
 		throw new EBPFProgramException(msg, new ArrayList<Integer>(mTrace),
-				new HashMap<Integer, Integer>(mRegisters));
+				new HashMap<EBPFInstruction.Register, Integer>(mRegisters));
 	}
 	
 	public int run(byte[] packet) throws EBPFProgramException {
@@ -57,7 +57,7 @@ public class EBPFInterpreter {
 		while (mRunning) {
 			step();
 		}
-		Integer r = mRegisters.get(0);
+		Integer r = mRegisters.get(EBPFInstruction.Register.R0);
 		if (r == null) {
 			abortInterpreter("R0 must be initalized before exit");
 		}
@@ -154,21 +154,21 @@ public class EBPFInterpreter {
 				}
 			} catch (IndexOutOfBoundsException e) {
 				if (quitOnOutOfBounds) {
-					mRegisters.put(0, 0);
+					mRegisters.put(EBPFInstruction.Register.R0, 0);
 					mRunning = false;
 					break;
 				} else {
 					abortInterpreter("Out of bounds memory access");
 				}
 			}
-			mRegisters.put(0, value);
+			mRegisters.put(EBPFInstruction.Register.R0, value);
 
 			// Scratch the caller saved registers
-			mRegisters.remove(1);
-			mRegisters.remove(2);
-			mRegisters.remove(3);
-			mRegisters.remove(4);
-			mRegisters.remove(5);
+			mRegisters.remove(EBPFInstruction.Register.R1);
+			mRegisters.remove(EBPFInstruction.Register.R2);
+			mRegisters.remove(EBPFInstruction.Register.R3);
+			mRegisters.remove(EBPFInstruction.Register.R4);
+			mRegisters.remove(EBPFInstruction.Register.R5);
 			
 			mInstructionPointer += 1;
 			break;
@@ -181,19 +181,10 @@ public class EBPFInterpreter {
 		}
 		
 	}
-	
-	private boolean registerReadable(int reg) {
-		return (reg >= 0 && reg <= 10); 
-	}
-	
-	private boolean registerWritable(int reg) {
-		// R10 is not writable
-		return (reg >= 0 && reg <= 9);
-	}
-
-	private int checkedRegisterRead(int reg) throws EBPFProgramException {
-		if (!registerReadable(reg)) {
-			abortInterpreter("Attempt to read out of bounds register");
+		
+	private int checkedRegisterRead(EBPFInstruction.Register reg) throws EBPFProgramException {
+		if (reg == null) {
+			abortInterpreter("Attempt to read null register");
 		}
 		Integer i = mRegisters.get(reg);
 		if (i == null) {
@@ -202,9 +193,12 @@ public class EBPFInterpreter {
 		return i.intValue();
 	}
 	
-	private void checkedRegisterWrite(int reg, int v) throws EBPFProgramException {
-		if (!registerWritable(reg)) {
-			abortInterpreter("Attempt to write out of bounds register");
+	private void checkedRegisterWrite(EBPFInstruction.Register reg, int v) throws EBPFProgramException {
+		if (reg == null) {
+			abortInterpreter("Attempt to write null register");
+		}
+		if (reg == EBPFInstruction.Register.R10) {
+			abortInterpreter("Attempt to write to read-only register");
 		}
 		mRegisters.put(reg, v);
 	}

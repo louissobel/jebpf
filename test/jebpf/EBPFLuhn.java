@@ -17,6 +17,7 @@ import org.junit.runners.Parameterized.Parameters;
 import com.sobel.jebpf.EBPFInstruction;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInstruction.InstructionSize;
+import com.sobel.jebpf.EBPFInstruction.Register;
 import com.sobel.jebpf.EBPFInterpreter;
 import com.sobel.jebpf.EBPFInterpreter.EBPFProgramException;
 
@@ -33,65 +34,64 @@ public class EBPFLuhn {
 	private EBPFInstruction[] makeCode() {
 		List<EBPFInstruction> prologue = Arrays.asList(new EBPFInstruction[] {
 			EBPFInstruction.LD_ABS(InstructionSize.W, 0), // R0 <- M[0] (length)
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, MAX_LENGTH), // R1 <- MAX_LENGTH
+			EBPFInstruction.MOV_IMM(Register.R1, MAX_LENGTH), // R1 <- MAX_LENGTH
 
-			EBPFInstruction.JMP_REG(InstructionCode.JGE, 1, 0, (short)2), // Skip 2 if MAX_LENGTH >= length
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, -1),
+			EBPFInstruction.JMP_REG(InstructionCode.JGE, Register.R1, Register.R0, (short)2), // Skip 2 if MAX_LENGTH >= length
+				EBPFInstruction.MOV_IMM(Register.R0, -1),
 				EBPFInstruction.EXIT(),
 
-			EBPFInstruction.ALU_REG(InstructionCode.MOV, 7, 0), // R7 <- R0
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 8, 0), // R8 <- 0 (parity)
-			EBPFInstruction.ALU_IMM(InstructionCode.MOV, 9, 0), // R9 <- 0 (sum)
+			EBPFInstruction.MOV_REG(Register.R7, Register.R0), // R7 <- R0
+			EBPFInstruction.MOV_IMM(Register.R8, 0), // R8 <- 0 (parity)
+			EBPFInstruction.MOV_IMM(Register.R9, 0), // R9 <- 0 (sum)
 		});
 
 		List<EBPFInstruction> loop = Arrays.asList(new EBPFInstruction[] {
 			// If R7 is 0, skip this loop
-			EBPFInstruction.JMP_IMM(InstructionCode.JEQ, 7, 0, (short)12),
+			EBPFInstruction.JMP_IMM(InstructionCode.JEQ, Register.R7, 0, (short)12),
 			// Get R7th byte
 			// (at 4 + R7 - 1)
 			// (AKA 3 + R7).
-			EBPFInstruction.LD_IND(InstructionSize.B, 7, 3),
+			EBPFInstruction.LD_IND(InstructionSize.B, Register.R7, 3),
 			// ATOI it
-			EBPFInstruction.ALU_IMM(InstructionCode.SUB, 0, 0x30),
+			EBPFInstruction.ALU_IMM(InstructionCode.SUB, Register.R0, 0x30),
 			// unsigned comparison takes care of negative number
 			// as well as too big
-			EBPFInstruction.JMP_IMM(InstructionCode.JGT, 0, 9, (short)8), // This offset needs to be a "continue"
+			EBPFInstruction.JMP_IMM(InstructionCode.JGT, Register.R0, 9, (short)8), // This offset needs to be a "continue"
 				// MMk, so R0 is our digit value.
 				// Double it if parity is currently 1
-				EBPFInstruction.JMP_IMM(InstructionCode.JEQ, 8, 0, (short)5),
+				EBPFInstruction.JMP_IMM(InstructionCode.JEQ, Register.R8, 0, (short)5),
 					// Parity 1 in here
 					// Double the digit, sum the digits of that number, set parity to 0
-					EBPFInstruction.ALU_IMM(InstructionCode.MUL, 0, 2),
+					EBPFInstruction.ALU_IMM(InstructionCode.MUL, Register.R0, 2),
 
 					// R1 = R0 / 10
-					EBPFInstruction.ALU_REG(InstructionCode.MOV, 1, 0),
-					EBPFInstruction.ALU_IMM(InstructionCode.DIV, 1, 10),
+					EBPFInstruction.MOV_REG(Register.R1, Register.R0),
+					EBPFInstruction.ALU_IMM(InstructionCode.DIV, Register.R1, 10),
 
 					// R0 = R0 % 10
-					EBPFInstruction.ALU_IMM(InstructionCode.MOD, 0, 10),
+					EBPFInstruction.ALU_IMM(InstructionCode.MOD, Register.R0, 10),
 
 					// R0 = R0 + R1
-					EBPFInstruction.ALU_REG(InstructionCode.ADD, 0, 1),
+					EBPFInstruction.ALU_REG(InstructionCode.ADD, Register.R0, Register.R1),
 
 				// End parity if
 				// Switch Parity...
-				EBPFInstruction.ALU_IMM(InstructionCode.XOR, 8, 1),
+				EBPFInstruction.ALU_IMM(InstructionCode.XOR, Register.R8, 1),
 				// Now we just add to the accumulator...
-				EBPFInstruction.ALU_REG(InstructionCode.ADD, 9, 0),
+				EBPFInstruction.ALU_REG(InstructionCode.ADD, Register.R9, Register.R0),
 
 			// End of is ascii digit check.
 			// Decrement length
-			EBPFInstruction.ALU_IMM(InstructionCode.SUB, 7, 1),
+			EBPFInstruction.ALU_IMM(InstructionCode.SUB, Register.R7, 1),
 		});
 		
 		List<EBPFInstruction> epilogue = Arrays.asList(new EBPFInstruction[] {
-				EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 9),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOD, 0, 10),
+				EBPFInstruction.ALU_IMM(InstructionCode.MOD, Register.R9, 10),
 
-				EBPFInstruction.JMP_IMM(InstructionCode.JNE, 0, 0, (short)2),
-					EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
-					EBPFInstruction.JMP_IMM(InstructionCode.JA, 0, 0, (short)1),
-					EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
+				EBPFInstruction.JMP_IMM(InstructionCode.JNE, Register.R9, 0, (short)2),
+					EBPFInstruction.ALU_IMM(InstructionCode.MOV, Register.R0, 1),
+					EBPFInstruction.JMP_JA((short)1),
+					EBPFInstruction.ALU_IMM(InstructionCode.MOV, Register.R0, 0),
 				EBPFInstruction.EXIT(),
 		});
 		

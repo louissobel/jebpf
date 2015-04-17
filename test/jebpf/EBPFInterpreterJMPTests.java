@@ -11,6 +11,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.sobel.jebpf.EBPFInstruction;
+import com.sobel.jebpf.EBPFInstruction.Register;
 import com.sobel.jebpf.EBPFInterpreter;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInterpreter.EBPFProgramException;
@@ -33,15 +34,15 @@ public class EBPFInterpreterJMPTests {
 			int left, int right) {
 		// Returns 1 if branch taken, 0 otherwise
 		return new EBPFInstruction[] {
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, left),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 2, right),
-				EBPFInstruction.JMP_REG(op, 1, 2, (short)1),
+				EBPFInstruction.MOV_IMM(Register.R0, 0),
+				EBPFInstruction.MOV_IMM(Register.R1, left),
+				EBPFInstruction.MOV_IMM(Register.R2, right),
+				EBPFInstruction.JMP_REG(op, Register.R1, Register.R2, (short)1),
 				// This one gets skipped hopefully...
 				EBPFInstruction.EXIT(),
 				
 				// Return 1
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
+				EBPFInstruction.MOV_IMM(Register.R0, 1),
 				EBPFInstruction.EXIT(),
 		};
 	}

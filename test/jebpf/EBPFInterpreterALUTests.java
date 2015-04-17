@@ -12,6 +12,7 @@ import org.junit.runners.Parameterized.Parameters;
 
 import com.sobel.jebpf.EBPFInstruction;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
+import com.sobel.jebpf.EBPFInstruction.Register;
 import com.sobel.jebpf.EBPFInterpreter;
 import com.sobel.jebpf.EBPFInterpreter.EBPFProgramException;
 
@@ -25,19 +26,19 @@ public class EBPFInterpreterALUTests {
 
 	private EBPFInstruction[] getAluTestCode(InstructionCode op, int left, int right) {
 		return new EBPFInstruction[] {
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, left),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, right),
-				EBPFInstruction.ALU_REG(op, 0, 1),
+				EBPFInstruction.MOV_IMM(Register.R0, left),
+				EBPFInstruction.MOV_IMM(Register.R1, right),
+				EBPFInstruction.ALU_REG(op, Register.R0, Register.R1),
 
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 3, left),
-				EBPFInstruction.ALU_IMM(op, 3, right),
+				EBPFInstruction.MOV_IMM(Register.R3, left),
+				EBPFInstruction.ALU_IMM(op, Register.R3, right),
 				// Check that 3 and 0 have same value, returning R0 if so
 				// Otherwise, jump past the first return, then
-				EBPFInstruction.JMP_REG(InstructionCode.JNE, 0, 3, (short)1),
+				EBPFInstruction.JMP_REG(InstructionCode.JNE, Register.R0, Register.R3, (short)1),
 				EBPFInstruction.EXIT(),
 
 				// Not Equal - this is an issue. Return -1.
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, -1),
+				EBPFInstruction.MOV_IMM(Register.R0, -1),
 				EBPFInstruction.EXIT()
 		};
 	}
