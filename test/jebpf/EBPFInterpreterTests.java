@@ -28,37 +28,29 @@ public class EBPFInterpreterTests {
 		EBPFInterpreter t = new EBPFInterpreter(code);
 		return t.run(data);
 	}
-
-	/**
-	 * JMP tests
-	 */
-	private static EBPFInstruction[] getJmpTestCode(InstructionCode op,
-			int left, int right) {
-		// Returns 1 if branch taken, 0 otherwise
-		return new EBPFInstruction[] {
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 0),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, left),
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 2, right),
-				EBPFInstruction.JMP_REG(op, 1, 2, (short)1),
-				// This one gets skipped hopefully...
-				EBPFInstruction.EXIT(),
-				
-				// Return 1
-				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
-				EBPFInstruction.EXIT(),
-		};
-	}
 	
+
 	@Test
-	public void testJa1() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JA, 5, 3);
-		assertEquals(runCode(code, null), 1);
+	public void testMovDoesntRequireLeftImm() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 0, 1),
+				EBPFInstruction.EXIT()
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		assertEquals(t.run(new byte[] {}), 1);
 	}
 	@Test
-	public void testJa2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JA, 3, 5);
-		assertEquals(runCode(code, null), 1);
+	public void testMovDoesntRequireLeftReg() throws EBPFProgramException {
+		EBPFInstruction[] code = {
+				EBPFInstruction.ALU_IMM(InstructionCode.MOV, 1, 1),
+				EBPFInstruction.ALU_REG(InstructionCode.MOV, 0, 1),
+				EBPFInstruction.EXIT()
+		};
+		EBPFInterpreter t = new EBPFInterpreter(code);
+		assertEquals(t.run(new byte[] {}), 1);
 	}
+
+	
 	@Test
 	public void testJaUnintialized() throws EBPFProgramException {
 		// Should be able to JA without initalized registers
@@ -68,121 +60,6 @@ public class EBPFInterpreterTests {
 			EBPFInstruction.EXIT(),
 		};
 		assertEquals(runCode(code, null), 5);
-	}
-	
-	@Test
-	public void testJeqTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JEQ, 5, 5);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJeqNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JEQ, 3, 5);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	// These are UNSIGNED comparisons
-	@Test
-	public void testJgtTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, 0x80000000, 0);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJgtNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, 4, -2);
-		assertEquals(runCode(code, null), 0);
-	}
-	@Test
-	public void testJgtNotTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGT, -2, -2);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	// These are UNSIGNED comparisons
-	@Test
-	public void testJgeTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, 0x80000000, 0);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJgeTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, -2, -2);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJgeNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JGE, 4, -2);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	@Test
-	public void testJsetTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSET, 9, 8);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsetNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSET, 9, 2);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	@Test
-	public void testJneTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JNE, 5, 6);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJneNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JNE, 5, 5);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	// SIGNED comparisons
-	@Test
-	public void testJsgtTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, 1);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsgtTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, -1);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsgtNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, -2, 4);
-		assertEquals(runCode(code, null), 0);
-	}
-	@Test
-	public void testJsgtNotTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGT, 5, 5);
-		assertEquals(runCode(code, null), 0);
-	}
-	
-	@Test
-	public void testJsgeTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 1);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsgeTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, -1);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsgeTaken3() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 5);
-		assertEquals(runCode(code, null), 1);
-	}
-	@Test
-	public void testJsgeNotTaken() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, 5, 6);
-		assertEquals(runCode(code, null), 0);
-	}
-	@Test
-	public void testJsgeNotTaken2() throws EBPFProgramException {
-		EBPFInstruction[] code = getJmpTestCode(InstructionCode.JSGE, -1, 6);
-		assertEquals(runCode(code, null), 0);
 	}
 	
 	/**
