@@ -11,6 +11,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.sobel.jebpf.EBPFInstruction;
+import com.sobel.jebpf.EBPFInstruction.EBPFDecodeException;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInstruction.Register;
 import com.sobel.jebpf.EBPFInterpreter;
@@ -74,9 +75,13 @@ public class EBPFInterpreterALUTests {
 	}
 
 	@Test
-	public void testALU() throws EBPFProgramException {
+	public void testALU() throws EBPFProgramException, EBPFDecodeException {
 		EBPFInstruction[] code = getAluTestCode(this.op, this.left, this.right);
 		EBPFInterpreter t = new EBPFInterpreter(code);
 		assertEquals(t.run(new byte[]{}), this.expected);
+
+		EBPFInstruction[] roundTrip = EBPFInstruction.decodeMany(EBPFInstruction.encodeMany(code));
+		EBPFInterpreter t2 = new EBPFInterpreter(roundTrip);
+		assertEquals(t2.run(new byte[]{}), this.expected);
 	}
 }

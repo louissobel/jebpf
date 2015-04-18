@@ -11,6 +11,7 @@ import org.junit.matchers.JUnitMatchers;
 import org.junit.rules.ExpectedException;
 
 import com.sobel.jebpf.EBPFInstruction;
+import com.sobel.jebpf.EBPFInstruction.EBPFDecodeException;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInstruction.InstructionSize;
 import com.sobel.jebpf.EBPFInstruction.Register;
@@ -27,7 +28,20 @@ public class EBPFInterpreterTests {
 			data = new byte[0];
 		}
 		EBPFInterpreter t = new EBPFInterpreter(code);
-		return t.run(data);
+		int run1 = t.run(data);
+
+		EBPFInstruction[] roundTrip;
+		try {
+			roundTrip = EBPFInstruction.decodeMany(EBPFInstruction.encodeMany(code));
+		} catch (EBPFDecodeException e) {
+			roundTrip = null;
+			fail("Decode exception: " + e.getMessage());
+		}
+		EBPFInterpreter t2 = new EBPFInterpreter(roundTrip);
+		int run2 = t2.run(data);
+		
+		assertEquals(run1, run2);
+		return run1;
 	}
 	
 

@@ -131,7 +131,7 @@ public class EBPFInterpreter {
 				ldOffset = insn.mImm + right;
 				break;
 			default:
-				abortInterpreter("Invalid Mode for LD class");
+				abortInterpreter("Invalid Mode for LD class: " + insn.mMode.toString());
 			}
 			
 			// Just try and use the byte buffer for access,

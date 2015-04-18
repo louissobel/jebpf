@@ -200,7 +200,7 @@ public class EBPFInstruction {
 	public final short mOff;
 	public final int mImm;
 
-	public static EBPFInstruction fromBytes(byte[] b) throws EBPFDecodeException {
+	public static EBPFInstruction decode(byte[] b) throws EBPFDecodeException {
 		if (b.length != 8) {
 			throw new EBPFDecodeException("Wrong Instruction Size");
 		}
@@ -214,7 +214,23 @@ public class EBPFInstruction {
 
 		return new EBPFInstruction(op, dstReg, srcReg, off, imm);
 	}
-
+	
+	public static EBPFInstruction[] decodeMany(byte[] b) throws EBPFDecodeException {
+		if (b.length % 8 != 0) {
+			throw new EBPFDecodeException("Bytes to decode not multiple of 8");
+		}
+		EBPFInstruction[] out = new EBPFInstruction[b.length / 8];
+		ByteBuffer bb = ByteBuffer.wrap(b);
+		
+		byte[] temp = new byte[8];
+		int i;
+		for (i = 0; i< (b.length / 8); i++) {
+			bb.get(temp);
+			out[i] = decode(temp);
+		}
+		return out;
+	}
+	
 	private EBPFInstruction(byte op, byte dstReg, byte srcReg, short off, int imm) throws EBPFDecodeException {
 		// Ok,,, parse the op. First is class.
 		byte iClass = (byte)(op & 0b00000111);
@@ -222,7 +238,7 @@ public class EBPFInstruction {
 		
 		if (mClass == InstructionClass.ALU || mClass == InstructionClass.JMP) {
 			byte source = (byte)((op & 0b00001000) >>> 3);
-			byte code = (byte)((op & 0xF0));
+			byte code = (byte)((op & 0xF0) >>> 4);
 			mSource = DecodeSource(source);
 			mCode = DecodeCode(mClass, code);
 
@@ -232,8 +248,8 @@ public class EBPFInstruction {
 			mSource = null;
 			mCode = null;
 
-			byte size = (byte)((op & 0x00011000) >>> 3);
-			byte mode = (byte)((op & 0x11100000) >>> 5);
+			byte size = (byte)((op & 0b00011000) >>> 3);
+			byte mode = (byte)((op & 0b11100000) >>> 5);
 			mSize = DecodeSize(size);
 			mMode = DecodeMode(mode);
 		}
@@ -261,6 +277,59 @@ public class EBPFInstruction {
 		mImm = imm;
 
 		validateCodeForClass(code, cl);
+	}
+	
+	public byte[] encode() {
+		ByteBuffer bb = ByteBuffer.allocate(8);
+		
+		// Pack the opcode.
+		byte op = packOpcode();
+		byte regSpec = packRegSpec();
+		short off = mOff;
+		int imm = mImm;
+		
+		bb.put(op);
+		bb.put(regSpec);
+		bb.putShort(off);
+		bb.putInt(imm);
+		return bb.array();
+	}
+	
+	public static byte[] encodeMany(EBPFInstruction[] code) {
+		ByteBuffer o = ByteBuffer.allocate(code.length * 8);
+		int i;
+		for (i = 0; i < code.length; i++) {
+			o.put(code[i].encode());
+		}
+		return o.array();
+	}
+	
+	private int getMaybeNullOrdinal(Enum e) {
+		if (e == null) {
+			return 0;
+		} else {
+			return e.ordinal();
+		}
+	}
+	
+	private byte packOpcode() {
+		byte opcode = (byte)(getMaybeNullOrdinal(mClass)  & 0b00000111);
+
+		if (mClass == InstructionClass.ALU) {
+			opcode |= (byte)((getMaybeNullOrdinal(mSource) & 1) << 3);
+			opcode |= (byte)((getMaybeNullOrdinal(mCode) & 0xF) << 4);
+		} else if (mClass == InstructionClass.JMP) {
+			opcode |= (byte)((getMaybeNullOrdinal(mSource) & 1) << 3);
+			opcode |= (byte)(((getMaybeNullOrdinal(mCode)  - (0xD + 1)) & 0xF) << 4);
+		} else {
+			opcode |= (byte)((getMaybeNullOrdinal(mSize) & 3) << 3);
+			opcode |= (byte)((getMaybeNullOrdinal(mMode)  & 7) << 5);
+		}
+		return opcode;
+	}
+	
+	private byte packRegSpec() {
+		return (byte)(((getMaybeNullOrdinal(mDstReg) & 0xF) << 4) | (getMaybeNullOrdinal(mSrcReg) & 0xF));
 	}
 
 	public static EBPFInstruction ALU_REG(InstructionCode code, Register dstReg, Register srcReg) {

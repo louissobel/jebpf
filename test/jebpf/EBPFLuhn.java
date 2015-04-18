@@ -15,6 +15,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 
 import com.sobel.jebpf.EBPFInstruction;
+import com.sobel.jebpf.EBPFInstruction.EBPFDecodeException;
 import com.sobel.jebpf.EBPFInstruction.InstructionCode;
 import com.sobel.jebpf.EBPFInstruction.InstructionSize;
 import com.sobel.jebpf.EBPFInstruction.Register;
@@ -129,7 +130,7 @@ public class EBPFLuhn {
 	}
 	
 	@Test
-	public void test() throws UnsupportedEncodingException, EBPFProgramException {
+	public void test() throws UnsupportedEncodingException, EBPFProgramException, EBPFDecodeException {
 		// Build the packet
 		byte[] stringBytes = this.in.getBytes("UTF-8");
 		if (stringBytes.length > MAX_LENGTH && this.expected != -1) {
@@ -141,6 +142,10 @@ public class EBPFLuhn {
 		b.put(stringBytes);
 		EBPFInterpreter t = new EBPFInterpreter(this.code);
 		assertEquals(t.run(b.array()), this.expected);
+
+		EBPFInstruction[] roundTrip = EBPFInstruction.decodeMany(EBPFInstruction.encodeMany(code));
+		EBPFInterpreter t2 = new EBPFInterpreter(roundTrip);
+		assertEquals(t2.run(b.array()), this.expected);
 	}
 
 }
